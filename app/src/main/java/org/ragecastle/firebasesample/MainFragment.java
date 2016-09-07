@@ -8,7 +8,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
+import android.widget.TextView;
 
+import com.firebase.ui.database.FirebaseListAdapter;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -27,6 +29,7 @@ public class MainFragment extends Fragment {
     private static final String LOG_TAG = MainFragment.class.getSimpleName();
     private FirebaseDatabase firebaseDatabase;
     private DatabaseReference databaseReference;
+    private FirebaseListAdapter<Item> firebaseListAdapter;
     public MainFragment() { }
 
     @Nullable
@@ -38,36 +41,29 @@ public class MainFragment extends Fragment {
 
         firebaseDatabase = FirebaseDatabase.getInstance();
         databaseReference = firebaseDatabase.getReference();
-        Item item = new Item("Item_2");
-        databaseReference.push().setValue(item);
 
-        databaseReference.addValueEventListener(new ValueEventListener() {
+        ListView listView = (ListView) rootView.findViewById(R.id.listview_main);
+
+        firebaseListAdapter =
+                new FirebaseListAdapter<Item>(getActivity(),
+                    Item.class,
+                    R.layout.listview_main,
+                    databaseReference) {
             @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                for (DataSnapshot dataSnapshot1 : dataSnapshot.getChildren()) {
-                    Item item1 = dataSnapshot1.getValue(Item.class);
-                    Log.e(LOG_TAG, item1.name());
-                }
+            protected void populateView(View v, Item model, int position) {
+                if (model.name()!=null)
+                    ((TextView) v.findViewById(R.id.item)).setText(model.name);
             }
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                Log.e (LOG_TAG, "Shits Broke: " + databaseError.getDetails());
-            }
-        });
+        };
 
-        String [] itemsList = {
-                "Item_1",
-                "Item_2",
-                "Item_3",
-                "Item_4",
-                "Item_5"};
-
-        ItemAdapter itemAdapter = new ItemAdapter(getActivity(), Arrays.asList(itemsList));
-
-        ListView listViewBars = (ListView) rootView.findViewById(R.id.listview_main);
-
-        listViewBars.setAdapter(itemAdapter);
+        listView.setAdapter(firebaseListAdapter);
 
         return rootView;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        firebaseListAdapter.cleanup();
     }
 }
